@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dammit - Placar Digital</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dammit Card Game Theme (HSL values) */
+            --felt: 140 65% 25%;
+            --felt-dark: 140 70% 15%;
+            --gold: 51 100% 50%;
+            --ivory: 44 77% 94%;
+            --copa: 0 67% 48%;
+
+            /* Mapeamento para uso */
+            --background: var(--felt-dark);
+            --foreground: var(--ivory);
+
+            --card: var(--ivory);
+            --card-foreground: var(--felt-dark);
+
+            --primary: var(--gold);
+            --primary-foreground: var(--felt-dark);
+
+            --secondary: var(--felt);
+            --secondary-foreground: var(--ivory);
+
+            --destructive: var(--copa);
+            --border: var(--gold);
+            --radius: 0.75rem;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto; /* Permite rolagem vertical SE necessário */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0; /* Adiciona espaço no topo e no rodapé */
+            box-sizing: border-box; /* Garante que o padding seja incluído na altura total */
+            background-image: 
+                radial-gradient(circle at 20% 50%, hsla(var(--gold), 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, hsla(var(--gold), 0.02) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            color: hsl(var(--primary));
+            text-align: center;
+        }
+
+        .sticky-header {
+            z-index: 10;
+            background-color: hsla(var(--background), 0.8);
+            backdrop-filter: blur(8px);
+            padding: 8px 25px; /* Altura reduzida */
+            border-bottom: 1px solid hsla(var(--border), 0.2);
+            width: 100%;
+        }
+        .sticky-header h1 {
+            margin: 0;
+            font-size: 2.4em;
+            letter-spacing: 1px;
+        }
+
+        .title-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .suit-icon {
+            color: hsl(var(--gold));
+            font-size: 1.2em;
+            text-shadow: 0 0 5px hsla(var(--gold), 0.7);
+            opacity: 0.8;
+        }
+
+
+
+        .container { /* Agora um flex container para centralizar o setup */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Setup Section --- */
+        #setup-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: radial-gradient(circle at center, hsla(var(--felt), 0.8), hsla(var(--felt-dark), 0.9));
+            border-radius: var(--radius);
+            border: 2px solid hsla(var(--gold), 0.3);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+            transition: box-shadow 0.3s ease-out;
+            animation: fadeIn 0.8s ease-out;
+            margin: 20px auto; /* Centraliza com margem no topo/base */
+            max-width: 900px;
+
+        }
+
+        #player-inputs {
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: hsla(var(--gold), 0.8);
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border: 2px solid hsl(var(--gold));
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: hsla(var(--felt), 0.2);
+            color: hsl(var(--foreground));
+            box-shadow: inset 0 0 6px rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        input::placeholder {
+            color: hsl(var(--foreground));
+            opacity: 0.7; /* Leve transparência para diferenciar do texto digitado */
+        }
+
+        input[type="text"]:hover, input[type="number"]:hover {
+            background-color: hsla(var(--felt), 0.4);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: hsl(var(--gold));
+            background-color: hsla(var(--felt), 0.3);
+            box-shadow: inset 0 0 6px rgba(255, 215, 0, 0.4), 0 0 8px hsla(var(--gold), 0.5);
+        }
+
+        #setup-section:hover {
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 0.5rem;
+            border: 1px solid hsla(var(--gold), 0.3);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: scale(0.97);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary { background-color: hsl(45, 90%, 50%); color: hsl(var(--primary-foreground)); }
+        .btn-primary:hover { background-color: hsl(45, 90%, 55%); }
+
+        .btn-secondary { background-color: hsl(var(--felt-dark)); color: hsl(var(--secondary-foreground)); border-color: hsla(var(--gold), 0.6); }
+        .btn-secondary:hover { background-color: hsl(var(--felt)); }
+
+        .btn-danger { background-color: hsl(var(--destructive)); color: hsl(var(--foreground)); }
+        .btn-danger:hover { background-color: hsl(var(--destructive) / 0.9); }
+
+        /* --- Game Section --- */
+        #game-section { 
+            display: none; 
+            height: 100%;
+            min-height: 0; /* Permite que o contêiner flexível encolha se necessário */
+            flex-direction: column;
+            padding: 20px; /* Espaçamento uniforme */
+            box-sizing: border-box; }
+
+        #game-info {
+            background-color: var(--background-color);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+            border: 2px solid hsla(var(--border), 0.2);
+            background-color: hsl(var(--secondary));
+        }
+
+        #game-info p {
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+
+        #game-info .highlight {
+            color: hsl(var(--primary));
+            font-weight: bold;
+        }
+
+        #score-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        #score-table th, #score-table td {
+            padding: 0.75rem 1rem; /* Aumentado o padding para melhor espaçamento */
+            text-align: center; 
+            border: 1px solid hsla(45, 80%, 60%, 0.15);
+        }
+
+        /* O estilo do cabeçalho da tabela foi movido para a tag thead abaixo para aplicar o position: sticky corretamente */
+        #score-table th {
+            color: hsl(var(--foreground)); /* Alterado de --primary (gold) para --foreground (ivory) */
+            position: sticky;
+            top: 0; /* Ajustado para a nova altura do cabeçalho principal */
+            z-index: 2;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1em;
+        }
+
+        #score-table thead {
+            /* position: -webkit-sticky;  Para compatibilidade com Safari */
+            position: sticky;
+            top: 0; /* Fixa o cabeçalho no topo do seu contêiner de rolagem (#scoreboard-panel) */
+            z-index: 3;
+            background: linear-gradient(to bottom, hsl(140, 40%, 20%), hsl(var(--felt-dark))); /* Gradiente dourado-esverdeado sutil */
+            color: hsl(var(--foreground));
+        }
+
+        #score-table tbody tr {
+            transition: background-color 0.2s;
+        }
+
+        #score-table tbody tr:nth-child(even) {
+            background-color: hsla(150, 40%, 18%, 0.7);
+        }
+        #score-table tbody tr:nth-child(odd) {
+            background-color: hsla(150, 40%, 12%, 0.7);
+        }
+
+        #score-table tbody tr:hover {
+            background-color: hsla(140, 30%, 25%, 0.8); /* Efeito de hover para destacar a linha */
+        }
+
+
+        #score-table .score-correct {
+            color: hsl(140, 50%, 60%); /* A brighter green */
+            font-weight: bold;
+        }
+
+        #score-table .score-incorrect {
+            color: hsl(var(--destructive));
+        }
+
+        .player-rank {
+            display: block;
+            font-size: 0.8em;
+            font-weight: normal;
+            margin-top: 4px;
+        }
+
+        .rank-1 { color: hsl(var(--gold)) !important; }
+        .rank-2 { color: hsl(44, 10%, 75%) !important; }
+        .rank-3 { color: hsl(30, 40%, 60%) !important; }
+        .rank-other { color: hsl(var(--foreground)); }
+
+        .active-round {
+            background-color: #e8f4fd !important;
+            color: hsl(var(--card-foreground)) !important;
+            font-style: italic;
+        }
+
+        .player-total-score {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 15px;
+        }
+
+        #bids-inputs, #results-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            width: 100%;
+        }
+
+        .input-group input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #dealer-restriction {
+            color: hsl(var(--destructive));
+            font-weight: bold;
+            text-align: center;
+            min-height: 24px;
+        }
+
+        #game-over {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: hsl(var(--secondary));
+            color: hsl(var(--foreground));
+            border-radius: var(--radius);
+        }
+        #game-over h2 { color: #fff; }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            align-items: start;
+            gap: 25px;
+            width: 100%; 
+            flex-grow: 1; /* Faz este layout ocupar o espaço disponível */
+            overflow: hidden; /* Garante que o layout não crie rolagem */
+            background-color: hsl(var(--felt-dark)); /* Fundo unificado para os painéis */
+            border-radius: var(--radius);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        #scoreboard-panel {
+            overflow-x: auto; /* Mantém rolagem horizontal se necessário */
+            overflow-y: auto;
+            height: 100%; /* Ocupa toda a altura do grid cell */
+            color: hsl(var(--foreground));
+            border-radius: 8px;
+            border: 1px solid hsla(var(--gold), 0.2);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1), inset 0 0 8px rgba(0,0,0,0.4); /* Sombra externa e interna */
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            color: hsl(var(--primary));
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* O h2 não é mais sticky, então a classe foi removida */
+        #scoreboard-panel h2 {
+            margin-top: 0;
+        }
+        /* O padding foi movido do painel para o h2 para não afetar a rolagem da tabela */
+        #scoreboard-panel h2 {
+            color: hsl(var(--foreground));
+            font-family: 'Playfair Display', serif;
+        }
+
+
+        @media (max-width: 900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            /* Desativa o comportamento 'sticky' em telas menores */
+            #control-panel {
+                height: auto;
+            }
+            .title-container {
+                gap: 8px;
+            }
+            .sticky-header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho principal fixo no topo da página -->
+    <div id="main-header-container" class="sticky-header" style="display: none;">
+        <div class="title-container">
+            <span class="suit-icon">♠</span><span class="suit-icon">♥</span><h1>Dammit</h1><span class="suit-icon">♦</span><span class="suit-icon">♣</span>
+        </div>
+    </div>
+    <div class="container">
+
+        <!-- Seção de Configuração -->
+        <div id="setup-section" style="padding: 25px;">
+            <button id="show-leaderboard-btn" class="btn-secondary" style="position: absolute; top: 85px; right: 20px;">🏆 Leaderboard</button>
+            <h2>Configuração do Jogo</h2>
+            <div class="input-group" style="margin-bottom: 20px; align-items: center;">
+                <label for="player-count">Quantos jogadores? (3-52)</label>
+                <input type="number" id="player-count" min="3" max="52" value="3" style="width: 100px; text-align: center; margin-top: 5px;">
+                <button id="set-players" class="btn-primary" style="margin-top: 10px;">Definir Jogadores</button>
+            </div>
+            <p style="font-weight: 500;">Insira o nome dos jogadores em ordem (sentido horário). O dealer inicial será sorteado.</p>
+            <div id="player-inputs">
+                <!-- Player inputs will be generated here -->
+            </div>
+            <div id="game-options" style="margin-top: 20px; width: 100%; display: none;">
+                <p style="font-weight: 500; text-align: center; margin-bottom: 10px;">Tipo de Partida</p>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
+                    <label><input type="radio" name="game-type" value="standard" checked> Padrão</label>
+                    <label><input type="radio" name="game-type" value="custom"> Personalizada</label>
+                </div>
+                <div id="custom-peak-group" class="input-group" style="display: none; align-items: center;">
+                    <label for="custom-peak-cards">Definir pico de cartas (máx)</label>
+                    <input type="number" id="custom-peak-cards" min="1" style="width: 100px; text-align: center; margin-top: 5px;">
+                    <p id="max-peak-info" style="font-size: 0.9em; opacity: 0.8; margin-top: 5px;"></p>
+                </div>
+            </div>
+
+
+            <div class="button-group" style="width: 100%;">
+                <button id="start-game" class="btn-primary" style="margin-top: 20px;" disabled>Iniciar Jogo</button>
+            </div>
+        </div>
+
+        <!-- Seção do Jogo -->
+        <div id="game-section">
+            <div class="main-layout">
+                <div id="control-panel"> <!-- Coluna da Esquerda -->
+                    <div id="game-info" style="background-color: transparent; border: none; padding: 0;"></div>
+                    <div id="controls" style="background-color: transparent; border: none; padding: 0; box-shadow: none;">
+                        <h2 id="control-header" style="margin-top: 0;"></h2>
+                        <div id="bids-inputs"></div>
+                        <div id="results-inputs"></div>
+                        <p id="dealer-restriction"></p>
+                        <div class="button-group">
+                            <button id="submit-bids" class="btn-primary">Registrar Palpites</button>
+                            <button id="submit-results" class="btn-primary" style="display: none;">Registrar Vazas e Avançar Rodada</button>
+                            <button id="redo-bids-btn" class="btn-secondary" style="display: none;">Refazer Palpites</button>
+                        </div>  
+                    </div>
+                </div>
+                <div id="scoreboard-panel"> <!-- Coluna da Direita -->
+                    <h2>Resumo da Partida</h2>
+                    <table id="score-table" style="margin-top: 1rem;">
+                        <thead>
+                            <tr id="player-headers"></tr>
+                        </thead>
+                        <tbody id="score-body"></tbody>
+                        <tfoot>
+                            <tr id="total-scores"></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div id="game-over" style="display: none;">
+                <h2>Fim de Jogo!</h2>
+                <p id="winner-text"></p>
+            </div>
+
+            <!-- Botões de controle do jogo que estavam faltando -->
+            <div class="button-group" style="padding-top: 20px; justify-content: center; display: none;" id="new-game-controls">
+                <button id="new-game" class="btn-danger">Começar Novo Jogo (apaga o atual)</button>
+                <button id="undo-round-btn" class="btn-secondary" style="display: none;">Desfazer Última Jogada</button>
+                <button id="export-results-btn" class="btn-secondary" style="display: none;">Encerrar e Exportar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- State Management ---
+        let gameState = {
+            players: [],
+            totalRounds: 0,
+            rounds: [],
+            currentRoundIndex: 0,
+            dealerIndex: 0,
+            gamePhase: 'bidding', // 'bidding' or 'results'
+        };
+
+        // --- DOM Elements ---
+        const setupSection = document.getElementById('setup-section');
+        const gameSection = document.getElementById('game-section');
+        const mainHeaderContainer = document.getElementById('main-header-container');
+        const playerInputsContainer = document.getElementById('player-inputs');
+        const startGameBtn = document.getElementById('start-game');
+        const setPlayersBtn = document.getElementById('set-players');
+        const newGameBtn = document.getElementById('new-game');
+        const gameOptionsDiv = document.getElementById('game-options');
+        const showLeaderboardBtn = document.getElementById('show-leaderboard-btn');
+        
+        const exportResultsBtn = document.getElementById('export-results-btn');
+        const newGameControls = document.getElementById('new-game-controls');
+        const gameInfo = document.getElementById('game-info');
+        const playerHeaders = document.getElementById('player-headers');
+        const scoreBody = document.getElementById('score-body');
+        const totalScores = document.getElementById('total-scores');
+
+        const controlHeader = document.getElementById('control-header');
+        const bidsInputs = document.getElementById('bids-inputs');
+        const resultsInputs = document.getElementById('results-inputs');
+        const dealerRestriction = document.getElementById('dealer-restriction');
+        const submitBidsBtn = document.getElementById('submit-bids');
+        const submitResultsBtn = document.getElementById('submit-results');
+        const redoBidsBtn = document.getElementById('redo-bids-btn');
+        const undoRoundBtn = document.getElementById('undo-round-btn');
+        
+        const gameOverDiv = document.getElementById('game-over');
+        const winnerText = document.getElementById('winner-text');
+
+        // --- Event Listeners ---
+        setPlayersBtn.addEventListener('click', generatePlayerInputs);
+        startGameBtn.addEventListener('click', startGame);
+        showLeaderboardBtn.addEventListener('click', renderLeaderboard);
+        newGameBtn.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja apagar o jogo atual e começar um novo?')) {
+                localStorage.removeItem('dammitGameState');
+                window.location.reload();
+            }
+        });
+        submitBidsBtn.addEventListener('click', handleSubmitBids);
+        submitResultsBtn.addEventListener('click', handleSubmitResults);
+        redoBidsBtn.addEventListener('click', handleRedoBids);
+        undoRoundBtn.addEventListener('click', handleUndoRound);
+        exportResultsBtn.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja encerrar a partida e exportar os resultados? A partida será finalizada no estado atual.')) {
+                endGame();
+                exportResultsToHTML();
+            }
+        });
+
+        // Listener for game type radio buttons
+        document.querySelectorAll('input[name="game-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const customPeakGroup = document.getElementById('custom-peak-group');
+                customPeakGroup.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+            });
+        });
+
+
+        // --- Game Logic ---
+        function generatePlayerInputs() {
+            const playerCountInput = document.getElementById('player-count');
+            const count = parseInt(playerCountInput.value, 10);
+
+            if (isNaN(count) || count < 3 || count > 52) {
+                alert('Por favor, insira um número de jogadores entre 3 e 52.');
+                return;
+            }
+
+            playerInputsContainer.innerHTML = ''; // Limpa os campos existentes
+            for (let i = 1; i <= count; i++) {
+                const div = document.createElement('div');
+                div.className = 'input-group';
+                div.innerHTML = `
+                    <label for="player${i}">Jogador ${i}</label>
+                    <input type="text" id="player${i}" name="player-name" value="Jogador ${i}">
+                `;
+                playerInputsContainer.appendChild(div);
+            }
+
+            // Show game options and update max peak info
+            gameOptionsDiv.style.display = 'block';
+            const maxPossiblePeak = Math.floor(52 / count);
+            document.getElementById('max-peak-info').textContent = `(Pico máximo possível: ${maxPossiblePeak})`;
+            document.getElementById('custom-peak-cards').max = maxPossiblePeak;
+
+            startGameBtn.disabled = false; // Habilita o botão de iniciar jogo
+        }
+        
+        function generateRounds(playerCount, peakCards) {
+            // This function now receives the peak cards directly
+            const rounds = [];
+            const maxCards = peakCards; // O número máximo de cartas por jogador na rodada de pico.
+
+            // Ascending
+            for (let i = 1; i < maxCards; i++) {
+                rounds.push(i);
+            }
+
+            // Lógica do Pico: Determina o número de rodadas de pico.
+            const cardsUsedAtPeak = peakCards * playerCount;
+            // Se o total de cartas distribuídas no pico for 52, há 1 rodada de pico.
+            // Se for menor que 52, há 3 rodadas de pico.
+            const peakRoundsCount = (cardsUsedAtPeak === 52) ? 1 : 3;
+
+            for (let i = 0; i < peakRoundsCount; i++) {
+                rounds.push(maxCards);
+            }
+            // Descending
+            for (let i = maxCards - 1; i >= 1; i--) {
+                rounds.push(i);
+            }
+            return rounds;
+        }
+
+        function startGame() {
+            const playerInputs = document.querySelectorAll('input[name="player-name"]');
+            const players = Array.from(playerInputs).map(input => ({
+                name: input.value.trim() || input.placeholder,
+                totalScore: 0
+            }));
+
+            if (players.length < 3) {
+                alert('São necessários no mínimo 3 jogadores.');
+                return;
+            }
+
+            const playerCount = players.length;
+            let maxCardsForGame;
+            const gameType = document.querySelector('input[name="game-type"]:checked').value;
+
+            if (gameType === 'custom') {
+                const customPeakInput = document.getElementById('custom-peak-cards');
+                const customPeak = parseInt(customPeakInput.value, 10);
+                const maxPossiblePeak = Math.floor(52 / playerCount);
+
+                if (isNaN(customPeak) || customPeak < 1 || customPeak > maxPossiblePeak) {
+                    alert(`Pico de cartas inválido. Por favor, insira um número entre 1 e ${maxPossiblePeak}.`);
+                    return;
+                }
+                maxCardsForGame = customPeak;
+            } else { // Standard game
+                maxCardsForGame = Math.floor(52 / playerCount);
+            }
+
+            gameState.players = players;
+            const roundCards = generateRounds(playerCount, maxCardsForGame);
+            gameState.totalRounds = roundCards.length;
+            gameState.rounds = roundCards.map(cards => ({ cards })); // Initialize round objects
+            gameState.currentRoundIndex = 0;
+            gameState.dealerIndex = Math.floor(Math.random() * players.length);
+            gameState.gamePhase = 'bidding'; 
+
+            setupSection.style.display = 'none';
+            mainHeaderContainer.style.display = 'block';
+            gameSection.style.display = 'flex'; // This should be enough
+            newGameControls.style.display = 'flex'; // Make the button visible
+            exportResultsBtn.style.display = 'inline-block'; // Show export button
+
+            saveState();
+            renderGame();
+        }
+
+        function handleSubmitBids() {
+            const currentRound = gameState.rounds[gameState.currentRoundIndex];
+            const bids = [];
+            let totalBids = 0;
+
+            for (let i = 0; i < gameState.players.length; i++) {
+                const input = document.getElementById(`bid-player-${i}`);
+                const bidValue = parseInt(input.value, 10);
+
+                if (isNaN(bidValue) || bidValue < 0 || bidValue > currentRound.cards) {
+                    alert(`Palpite inválido para ${gameState.players[i].name}. Deve ser um número entre 0 e ${currentRound.cards}.`);
+                    return;
+                }
+                
+                bids[i] = bidValue;
+                totalBids += bidValue;
+            }
+
+            // Dealer restriction check
+            const isDealerRestricted = (totalBids - bids[gameState.dealerIndex]) + bids[gameState.dealerIndex] === currentRound.cards;
+            if (isDealerRestricted) {
+                alert(`A soma dos palpites (${totalBids}) não pode ser igual ao número de cartas na rodada (${currentRound.cards}). O dealer (${gameState.players[gameState.dealerIndex].name}) deve alterar seu palpite.`);
+                return;
+            }
+
+            currentRound.bids = bids;
+            gameState.gamePhase = 'results';
+            saveState();
+            renderGame();
+        }
+
+        function handleRedoBids() {
+            // Volta para a fase de palpites da rodada atual
+            gameState.gamePhase = 'bidding';
+            // Não é necessário limpar os palpites, pois a interface será reconstruída
+            saveState();
+            renderGame();
+        }
+
+        function handleSubmitResults() {
+            const currentRound = gameState.rounds[gameState.currentRoundIndex];
+            const results = [];
+            let totalResults = 0;
+
+            for (let i = 0; i < gameState.players.length; i++) {
+                const input = document.getElementById(`result-player-${i}`);
+                const resultValue = parseInt(input.value, 10);
+
+                if (isNaN(resultValue) || resultValue < 0 || resultValue > currentRound.cards) {
+                    alert(`Resultado inválido para ${gameState.players[i].name}. Deve ser um número entre 0 e ${currentRound.cards}.`);
+                    return;
+                }
+                results[i] = resultValue;
+                totalResults += resultValue;
+            }
+
+            if (totalResults !== currentRound.cards) {
+                alert(`A soma das vazas (${totalResults}) deve ser igual ao número de cartas na rodada (${currentRound.cards}). Por favor, corrija os valores.`);
+                return;
+            }
+
+            currentRound.dealerIndex = gameState.dealerIndex; // Store dealer for this round
+            currentRound.results = results;
+            calculateScores(currentRound);
+
+            // Advance to next round
+            if (gameState.currentRoundIndex < gameState.totalRounds - 1) {
+                gameState.currentRoundIndex++;
+                gameState.dealerIndex = (gameState.dealerIndex + 1) % gameState.players.length;
+                gameState.gamePhase = 'bidding';
+                saveState();
+                renderGame();
+            } else {
+                endGame();
+            }
+        }
+
+        function handleUndoRound() {
+            if (gameState.currentRoundIndex === 0) {
+                alert("Não é possível desfazer a primeira rodada.");
+                return;
+            }
+            if (!confirm('Tem certeza que deseja desfazer a última rodada jogada? As pontuações serão revertidas.')) {
+                return;
+            }
+
+            // Reverte para a rodada anterior
+            const lastRoundIndex = gameState.currentRoundIndex - 1;
+            const lastRoundData = gameState.rounds[lastRoundIndex];
+
+            // Subtrai os pontos da rodada desfeita do total de cada jogador
+            lastRoundData.scores.forEach((score, playerIndex) => {
+                gameState.players[playerIndex].totalScore -= score;
+            });
+
+            // Limpa os dados da rodada desfeita e define como a rodada atual
+            gameState.rounds[lastRoundIndex] = { cards: lastRoundData.cards }; // Mantém apenas o n° de cartas
+            gameState.currentRoundIndex = lastRoundIndex;
+            gameState.dealerIndex = (gameState.dealerIndex - 1 + gameState.players.length) % gameState.players.length;
+            gameState.gamePhase = 'bidding';
+            saveState();
+            renderGame();
+        }
+        
+        function calculateScores(round) {
+            round.scores = [];
+            for (let i = 0; i < gameState.players.length; i++) {
+                const bid = round.bids[i];
+                const result = round.results[i];
+                let roundScore = 0;
+
+                if (bid === result) {
+                    roundScore = 10 + result;
+                } else {
+                    roundScore = result;
+                }
+                round.scores[i] = roundScore;
+                gameState.players[i].totalScore += roundScore;
+            }
+        }
+
+        function updateLeaderboard(winnerData) {
+            const leaderboard = JSON.parse(localStorage.getItem('dammitLeaderboard')) || {};
+
+            gameState.players.forEach(player => {
+                const playerKey = player.name.trim().toLowerCase();
+
+                // Initialize player if they don't exist
+                if (!leaderboard[playerKey]) {
+                    leaderboard[playerKey] = {
+                        displayName: player.name.trim(),
+                        gamesPlayed: 0,
+                        wins: 0,
+                        totalScore: 0,
+                        bestScore: 0,
+                        perfectRounds: 0
+                    };
+                }
+
+                const stats = leaderboard[playerKey];
+                stats.gamesPlayed++;
+                stats.totalScore += player.totalScore;
+
+                if (player.totalScore > stats.bestScore) {
+                    stats.bestScore = player.totalScore;
+                }
+
+                if (winnerData.winnerNames.includes(player.name)) {
+                    stats.wins++;
+                }
+
+                // Count perfect rounds in this game
+                gameState.rounds.forEach(round => {
+                    if (!round.scores) return; // Only count played rounds
+                    const playerIndex = gameState.players.findIndex(p => p.name === player.name);
+                    if (round.bids[playerIndex] === round.results[playerIndex]) {
+                        stats.perfectRounds++;
+                    }
+                });
+            });
+
+            localStorage.setItem('dammitLeaderboard', JSON.stringify(leaderboard));
+        }
+
+        function endGame() {
+            gameState.gamePhase = 'finished';
+            saveState();
+            renderGame();
+        }
+
+        function exportResultsToHTML() {
+            const date = new Date();
+            const timestamp = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+            const winnerInfo = winnerText.textContent;
+
+            // 1. Build the HTML string for the table
+            let tableHeaders = '<tr>';
+            const ranks = calculateRanks(); // Ensure ranks are calculated
+            
+            // If winnerText is empty (because export was clicked before game ended naturally), populate it.
+            if (!winnerInfo && gameState.gamePhase === 'finished') {
+                winnerText.textContent = getWinnerData().text;
+            }
+            gameState.players.forEach((player, index) => {
+                const rankInfo = ranks.find(r => r.index === index);
+                const rankClass = rankInfo ? `rank-${rankInfo.rank > 3 ? 'other' : rankInfo.rank}` : 'rank-other';
+                tableHeaders += `<th class="${rankClass}">${player.name}<br><small>${player.totalScore} pts - ${rankInfo.rank}º Lugar</small></th>`;
+            });
+            tableHeaders += '<th>Dealer</th><th>Rodada</th></tr>';
+
+            let tableBody = '';
+            gameState.rounds.forEach((roundData, i) => {
+                if (!roundData.scores) return; // Skip rounds not played
+                for (let j = 0; j < gameState.players.length; j++) {
+                    const score = roundData.scores[j];
+                    const bid = roundData.bids[j];
+                    const result = roundData.results[j];
+                    const scoreClass = (bid === result) ? 'score-correct' : 'score-incorrect';
+                    tableBody += `<td><span class="${scoreClass}">${score}</span> <small>(${bid}/${result})</small></td>`;
+                }
+                const dealerName = gameState.players[roundData.dealerIndex].name;
+                tableBody += `<td>${dealerName}</td>`;
+                tableBody += `<td>${i + 1} (${roundData.cards} cartas)</td>`;
+                tableBody += '</tr>\n';
+            });
+
+            // 2. Create the full HTML document as a string
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+                    <title>Histórico da Partida - Dammit - ${timestamp}</title>
+                    <style>
+                        body { 
+                            font-family: 'Inter', sans-serif; 
+                            background-color: hsl(140, 70%, 15%); 
+                            color: hsl(44, 77%, 94%); 
+                            margin: 0; 
+                            padding: 20px; 
+                        }
+                        .container { max-width: 1000px; margin: auto; background: hsl(140, 70%, 15%); padding: 20px; border-radius: 8px; border: 1px solid hsla(51, 100%, 50%, 0.2); box-shadow: 0 0 15px rgba(255, 215, 0, 0.1); }
+                        h1, h2 { font-family: 'Playfair Display', serif; text-align: center; color: hsl(51, 100%, 50%); }
+                        h2 { font-size: 1.2em; opacity: 0.9; }
+                        p { text-align: center; font-size: 1.2em; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { padding: 12px 15px; border: 1px solid hsla(51, 100%, 50%, 0.15); text-align: center; }
+                        thead th { 
+                            background: linear-gradient(to bottom, hsl(140, 40%, 20%), hsl(140, 70%, 15%));
+                            color: hsl(44, 77%, 94%);
+                            font-family: 'Playfair Display', serif;
+                            font-size: 1.1em;
+                        }
+                        tbody tr:nth-child(even) { background-color: hsla(150, 40%, 18%, 0.7); }
+                        tbody tr:nth-child(odd) { background-color: hsla(150, 40%, 12%, 0.7); }
+                        .score-correct { color: hsl(140, 50%, 60%); font-weight: bold; }
+                        .score-incorrect { color: hsl(0, 67%, 48%); }
+                        .rank-1 { color: hsl(51, 100%, 50%) !important; }
+                        .rank-2 { color: hsl(44, 10%, 75%) !important; }
+                        .rank-3 { color: hsl(30, 40%, 60%) !important; }
+                        small { opacity: 0.8; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Dammit - Resumo da Partida</h1>
+                        <h2>${timestamp}</h2>
+                        <p>${winnerText.textContent}</p>
+                        <table>
+                            <thead>${tableHeaders}</thead>
+                            <tbody>${tableBody}</tbody>
+                        </table>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // 3. Create a Blob and trigger download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `dammit-partida-${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        // --- Rendering ---
+        function renderGame() {
+            if (gameState.players.length === 0) return;
+
+            renderHeaders();
+            renderScoreBody();
+            renderTotalScores();
+
+            if (gameState.gamePhase === 'finished') {
+                displayWinner();
+                return;
+            }
+            
+            renderGameInfo(gameState.rounds[gameState.currentRoundIndex]);
+            renderControls(gameState.rounds[gameState.currentRoundIndex]);
+            scrollToActiveRound();
+        }
+
+        function renderHeaders() {
+            const ranks = calculateRanks();
+            let headerHtml = '';
+            gameState.players.forEach((player, index) => { // This part is inside thead
+                const rankInfo = ranks.find(r => r.index === index);
+                const totalScoreText = `<span class="player-total-score">${player.totalScore} pts</span>`;
+                const rankClass = rankInfo ? `rank-${rankInfo.rank > 3 ? 'other' : rankInfo.rank}` : 'rank-other';
+                const rankText = rankInfo ? `<span class="player-rank ${rankClass}">${rankInfo.rank}º Lugar</span>` : '';                
+                headerHtml += `<th class="${rankClass}">${player.name}${totalScoreText}${rankText}</th>`;
+            });
+            headerHtml += '<th>Dealer</th><th>Rodada</th>';
+            playerHeaders.innerHTML = headerHtml;
+        }
+
+        function renderScoreBody() {
+            scoreBody.innerHTML = '';
+
+            for (let i = 0; i < gameState.totalRounds; i++) {
+                let rowHtml = '';
+                const roundData = gameState.rounds[i] || { cards: '?' }; // Fallback for uninitialized rounds
+                const cardsInRound = typeof roundData === 'object' ? roundData.cards : roundData;
+
+                if (i < gameState.currentRoundIndex) { // Completed rounds
+                    rowHtml = '<tr>';
+                    for (let j = 0; j < gameState.players.length; j++) {
+                        const score = roundData.scores[j];
+                        const bid = roundData.bids[j];
+                        const result = roundData.results[j];
+                        const scoreClass = (bid === result) ? 'score-correct' : 'score-incorrect';
+                        rowHtml += `<td><span class="${scoreClass}">${score}</span> <small style="opacity: 0.7;">(${bid}/${result})</small></td>`;
+                    }
+                    const dealerName = gameState.players[roundData.dealerIndex].name;
+                    rowHtml += `<td>${dealerName}</td>`;
+                } else if (i === gameState.currentRoundIndex && gameState.gamePhase !== 'finished') { // Active round
+                    rowHtml = `<tr class="active-round">`;
+                    rowHtml += `<td colspan="${gameState.players.length}">-</td>`;
+                    const currentDealerName = gameState.players[gameState.dealerIndex].name;
+                    rowHtml += `<td>${currentDealerName}</td>`;
+                } else {
+                    // Future rounds
+                    rowHtml = '<tr>';
+                    rowHtml += `<td colspan="${gameState.players.length}">-</td>`;
+                    rowHtml += `<td>-</td>`;
+                }
+                rowHtml += `<td>${i + 1} (${cardsInRound} cartas)</td>`;
+                rowHtml += '</tr>';
+                scoreBody.innerHTML += rowHtml;
+            }
+        }
+
+        function scrollToActiveRound() {
+            const activeRow = document.querySelector('.active-round');
+            if (activeRow) {
+                activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function calculateRanks() {
+            const sortedPlayers = [...gameState.players]
+                .map((p, index) => ({ ...p, index }))
+                .sort((a, b) => b.totalScore - a.totalScore);
+            
+            const ranks = [];
+            let currentRank = 0;
+            let lastScore = Infinity;
+            sortedPlayers.forEach(player => {
+                if (player.totalScore < lastScore) currentRank++;
+                ranks.push({ index: player.index, rank: currentRank });
+                lastScore = player.totalScore;
+            });
+            return ranks;
+        }
+
+        function renderTotalScores() {
+            totalScores.innerHTML = ''; // Remove the total row from the footer
+        }
+
+        function renderGameInfo(round) {
+            const dealerName = gameState.players[gameState.dealerIndex].name;
+            const startingPlayerIndex = (gameState.dealerIndex + 1) % gameState.players.length;
+            const startingPlayerName = gameState.players[startingPlayerIndex].name;
+            gameInfo.innerHTML = `
+                <p><strong>Rodada Atual:</strong> <span class="highlight">${gameState.currentRoundIndex + 1}</span> de ${gameState.rounds.length}</p>
+                <p><strong>Cartas por Jogador:</strong> <span class="highlight">${round.cards}</span></p>
+                <p><strong>Dealer da Rodada:</strong> <span class="highlight">${dealerName}</span></p>
+                <p><strong>Jogador que sai:</strong> <span class="highlight">${startingPlayerName}</span></p>
+                <p id="bid-status-container" style="display: none;"><strong>Status dos Palpites:</strong> <span id="bid-status" class="highlight"></span></p>
+            `;
+            // Se estiver na fase de resultados, recalcula e mostra o status dos palpites
+            if (gameState.gamePhase === 'results') {
+                updateBidStatus(round.cards, true);
+            }
+        }
+
+        function renderControls(round) {
+            bidsInputs.innerHTML = '';
+            resultsInputs.innerHTML = '';
+            dealerRestriction.textContent = '';
+            
+            const isBiddingPhase = gameState.gamePhase === 'bidding';
+            
+            controlHeader.textContent = isBiddingPhase ? 'Façam seus palpites' : 'Insiram as vazas feitas';
+            submitBidsBtn.style.display = isBiddingPhase ? 'inline-block' : 'none';
+            submitResultsBtn.style.display = isBiddingPhase ? 'none' : 'inline-block';
+            redoBidsBtn.style.display = isBiddingPhase ? 'none' : 'inline-block';
+            
+            // Mostra o botão de desfazer se não estivermos na primeira rodada
+            undoRoundBtn.style.display = gameState.currentRoundIndex > 0 ? 'inline-block' : 'none';
+            
+            const bidOrder = getBidOrder();
+            
+            if (isBiddingPhase) {
+                bidOrder.forEach(playerIndex => {
+                    const player = gameState.players[playerIndex];
+                    const div = document.createElement('div');
+                    div.className = 'input-group';
+                    div.innerHTML = `
+                        <label for="bid-player-${playerIndex}">${player.name} ${playerIndex === gameState.dealerIndex ? '(Dealer)' : ''}</label>
+                        <input type="number" id="bid-player-${playerIndex}" min="0" max="${round.cards}" placeholder="0-${round.cards}" value="${round.bids?.[playerIndex] ?? ''}">
+                    `;
+                    bidsInputs.appendChild(div);
+                });
+                // Add listener for dealer restriction
+                bidsInputs.addEventListener('input', () => updateBidStatus(round.cards));
+                updateBidStatus(round.cards); // Initial call
+            } else { // Results phase
+                gameState.players.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'input-group';
+                    div.innerHTML = `
+                        <label for="result-player-${index}">${player.name} (Palpite: ${round.bids[index]})</label>
+                        <input type="number" id="result-player-${index}" min="0" max="${round.cards}" placeholder="Vazas">
+                    `;
+                    resultsInputs.appendChild(div);
+                });
+            }
+        }
+        
+        function getBidOrder() {
+            const order = [];
+            const playerCount = gameState.players.length;
+            for (let i = 1; i <= playerCount; i++) {
+                order.push((gameState.dealerIndex + i) % playerCount);
+            }
+            return order;
+        }
+
+        function updateBidStatus(cardsInRound, isResultsPhase = false) {
+            let totalBids = 0;
+            let allBidsEntered = true;
+            const bidOrder = getBidOrder();
+            const dealerIndex = gameState.dealerIndex;
+
+            for (let i = 0; i < bidOrder.length; i++) {
+                const playerIndex = bidOrder[i];
+                if (isResultsPhase) {
+                    totalBids += gameState.rounds[gameState.currentRoundIndex].bids[playerIndex];
+                } else {
+                    const input = document.getElementById(`bid-player-${playerIndex}`);
+                    if (input.value === '') {
+                        if (playerIndex !== dealerIndex) allBidsEntered = false;
+                        continue;
+                    }
+                    totalBids += parseInt(input.value, 10);
+                }
+            }
+            
+            const bidStatusContainer = document.getElementById('bid-status-container');
+            const bidStatus = document.getElementById('bid-status');
+            bidStatusContainer.style.display = 'block';
+
+            const difference = cardsInRound - totalBids;
+
+            if (difference === 0) {
+                bidStatus.textContent = 'DAMMIT!';
+                bidStatus.style.color = 'hsl(var(--destructive))';
+            } else if (difference > 0) {
+                bidStatus.textContent = `Sobrando ${difference}`; // Ex: 10 cartas, 8 palpites -> Sobrando 2
+                bidStatus.style.color = 'hsl(var(--primary))'; // Gold/Yellow
+            } else { // difference < 0
+                bidStatus.textContent = `Faltando ${Math.abs(difference)}`; // Ex: 10 cartas, 12 palpites -> Faltando 2
+                bidStatus.style.color = 'hsl(var(--destructive))'; // Red
+            }
+
+            // Also handle dealer restriction text
+            if (allBidsEntered) {
+                const dealerInput = document.getElementById(`bid-player-${dealerIndex}`);
+                const dealerBid = dealerInput && dealerInput.value !== '' ? parseInt(dealerInput.value, 10) : 0;
+                const sumWithoutDealer = totalBids - dealerBid;
+                const restrictedBid = cardsInRound - sumWithoutDealer;
+                
+                dealerRestriction.textContent = `Atenção Dealer: seu palpite não pode ser ${restrictedBid}.`;
+
+            } else {
+                dealerRestriction.textContent = '';
+            }
+        }
+
+        function getWinnerData() {
+            let maxScore = -1;
+            let winnerNames = [];
+            gameState.players.forEach(player => {
+                if (player.totalScore > maxScore) {
+                    maxScore = player.totalScore;
+                    winnerNames = [player.name];
+                } else if (player.totalScore === maxScore) {
+                    winnerNames.push(player.name);
+                }
+            });
+            
+            let text = '';
+            if (winnerNames.length > 1) {
+                text = `Houve um empate entre ${winnerNames.join(' e ')} com ${maxScore} pontos!`;
+            } else {
+                text = `O grande vencedor é ${winnerNames[0]} com ${maxScore} pontos! Parabéns!`;
+            }
+            return { winnerNames, maxScore, text };
+        }
+
+        function displayWinner() {
+            document.querySelector('.main-layout').style.display = 'none'; // Esconde os painéis do jogo
+            gameOverDiv.style.display = 'block'; // Mostra a mensagem de vencedor
+            
+            const winnerData = getWinnerData();
+            updateLeaderboard(winnerData); // <<< ATUALIZA O LEADERBOARD AQUI
+            undoRoundBtn.style.display = 'none'; // Esconde o botão de desfazer no fim do jogo
+            winnerText.textContent = winnerData.text;
+        }
+
+        // Attach to window to make it accessible from the inline onclick attribute
+        window.resetLeaderboard = function() {
+            if (confirm('TEM CERTEZA? Esta ação vai apagar permanentemente todas as estatísticas do leaderboard e não pode ser desfeita.')) {
+                localStorage.removeItem('dammitLeaderboard');
+                document.getElementById('leaderboard-modal').remove(); // Fecha o modal atual
+                renderLeaderboard(); // Reabre o modal, agora vazio
+            }
+        }
+
+        function renderLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem('dammitLeaderboard')) || {};
+            const sortedPlayers = Object.values(leaderboard).sort((a, b) => b.wins - a.wins || b.totalScore - a.totalScore);
+
+            let leaderboardHtml = `
+                <div id="leaderboard-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100;">
+                    <div style="background: hsl(var(--felt-dark)); padding: 30px; border-radius: var(--radius); border: 2px solid hsla(var(--gold), 0.5); width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                        <h2 style="color: hsl(var(--gold)); margin-top: 0;">🏆 Leaderboard Geral 🏆</h2>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="text-align: left; border-bottom: 2px solid hsla(var(--gold), 0.3);">
+                                    <th style="padding: 10px;">Rank</th>
+                                    <th style="padding: 10px;">Jogador</th>
+                                    <th style="padding: 10px;">Vitórias</th>
+                                    <th style="padding: 10px;">Partidas</th>
+                                    <th style="padding: 10px;">Pontuação Total</th>
+                                    <th style="padding: 10px;">Melhor Partida</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            if (sortedPlayers.length === 0) {
+                leaderboardHtml += '<tr><td colspan="6" style="text-align: center; padding: 40px;">Nenhuma partida foi finalizada ainda. Jogue para aparecer aqui!</td></tr>';
+            } else {
+                sortedPlayers.forEach((player, index) => {
+                    leaderboardHtml += `
+                        <tr style="border-bottom: 1px solid hsla(var(--gold), 0.1);">
+                            <td style="padding: 15px 10px; font-size: 1.2em; font-weight: bold;">${index + 1}</td>
+                            <td style="padding: 15px 10px;">${player.displayName}</td>
+                            <td style="padding: 15px 10px;">${player.wins}</td>
+                            <td style="padding: 15px 10px;">${player.gamesPlayed}</td>
+                            <td style="padding: 15px 10px;">${player.totalScore}</td>
+                            <td style="padding: 15px 10px;">${player.bestScore}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            leaderboardHtml += `</tbody></table>
+                <div class="button-group" style="margin-top: 20px; justify-content: space-between; width: 100%;">
+                    <button onclick="resetLeaderboard()" class="btn-danger">Zerar Leaderboard</button>
+                    <button onclick="this.closest('#leaderboard-modal').remove()" class="btn-primary">Fechar</button>
+                </div></div></div>`;
+            document.body.insertAdjacentHTML('beforeend', leaderboardHtml);
+        }
+
+        // --- Persistence ---
+        function saveState() {
+            localStorage.setItem('dammitGameState', JSON.stringify(gameState));
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('dammitGameState');
+            if (savedState) {
+                gameState = JSON.parse(savedState);
+                if (gameState.players && gameState.players.length > 0) {
+                    setupSection.style.display = 'none';
+                    mainHeaderContainer.style.display = 'block';
+                    gameSection.style.display = 'flex';
+                    
+                    if (gameState.gamePhase === 'finished') {
+                        document.querySelector('.main-layout').style.display = 'none';
+                        newGameControls.style.display = 'flex';
+                        exportResultsBtn.style.display = 'inline-block';
+                    } else {
+                        newGameControls.style.display = 'flex';
+                        exportResultsBtn.style.display = 'inline-block';
+                    }
+                    renderGame(); // Isso vai chamar displayWinner se o jogo tiver acabado
+                }
+            }
+        }
+
+        // Initial load & setup
+        loadState();
+    });
+    </script>
+
+</body>
+</html>

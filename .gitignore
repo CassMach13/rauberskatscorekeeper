@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.manifest
+venv/
+env/
+
+# Data & Logs
+*.log
+*.sqlite
+resultados_jogos/
+
+# Secrets (CRITICAL)
+firebase-credentials.json
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large/Legacy Folders
+Apps_versoes_excluidas/
+printscreens/
+Rauberskat_app_local/
+
+# IDE
+.vscode/
+.idea/

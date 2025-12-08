@@ -1,0 +1,171 @@
+# c:/Users/cassi/Downloads/Rauberskat_app_Gemini - Online/app.py
+import firebase_admin
+from firebase_admin import credentials, firestore
+from flask import Flask, request, jsonify
+from rauberskat_backend_oficial import RauberskatScorekeeper
+from flask_cors import CORS
+
+# --- Inicialização do Firebase ---
+# Certifique-se de que o arquivo 'firebase-credentials.json' está na mesma pasta
+cred = credentials.Certificate("firebase-credentials.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# --- Inicialização do Flask ---
+# Configura a pasta 'public' como a pasta de arquivos estáticos (CSS, JS, Imagens)
+app = Flask(__name__, static_folder='public', static_url_path='')
+
+# --- Configuração do CORS ---
+# Isso permite que requisições de qualquer origem acessem sua API.
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# --- Rotas da API ---
+
+@app.route('/')
+def index():
+    """Serve o arquivo index.html da pasta public"""
+    return app.send_static_file('index.html')
+
+@app.route('/api/start_game', methods=['POST'])
+def start_game():
+    """
+    Cria uma nova partida no Firestore.
+    Recebe: {"player_names": ["Nome1", ...], "date": "...", "venue": "...", ...}
+    Retorna: {"game_id": "ID_DA_NOVA_PARTIDA"}
+    """
+    data = request.get_json()
+    player_names = data.get('player_names')
+
+    if not player_names or len(player_names) not in [3, 4]:
+        return jsonify({"error": "A lista de jogadores é inválida."}), 400
+
+    # Cria o estado inicial do jogo
+    initial_state = {
+        "player_names": player_names,
+        "num_players": len(player_names),
+        "scores": {name: 0 for name in player_names},
+        "current_mode": "Bock",
+        "dealer_index": 0,
+        "game_history": [],
+        "previous_states": [],
+        # Novos campos de detalhes da partida
+        "date": data.get("date"),
+        "venue": data.get("venue"),
+        "table": data.get("table"),
+        "start_time": data.get("start_time"),
+        "end_time": data.get("end_time"),
+        # Outros campos de estado do jogo
+        "bock_rounds_played": 0,
+        "ramsch_rounds_played": 0,
+        "last_game_name": "",
+        "ramsch_losses": {name: 0 for name in player_names},
+        "ramsch_scores_count": {name: 0 for name in player_names},
+        "ramsch_ramsch_count": 0,
+        "dealer_turns_count": {name: 0 for name in player_names},
+        "last_scoring_player": None,
+        "awaiting_ramsch_decision": False,
+        "ramsch_candidates": [],
+        "last_was_bonus": False,
+    }
+
+    # Adiciona o novo documento de partida ao Firestore
+    update_time, game_ref = db.collection('partidas').add(initial_state)
+    
+    # --- Log de Confirmação no Terminal ---
+    print("\n" + "="*60)
+    print("🎮 JOGO INICIADO!")
+    print(f"👥 Jogadores: {', '.join(initial_state['player_names'])}")
+    print(f"🔄 Rodada inicial: {initial_state['current_mode']}")
+    # O dealer inicial é sempre o jogador no índice 0
+    print(f"🎯 Dealer inicial: {initial_state['player_names'][0]}")
+    print("="*60 + "\n")
+
+    return jsonify({"game_id": game_ref.id}), 201
+
+@app.route('/api/game/<game_id>/calculate', methods=['POST'])
+def calculate(game_id):
+    """
+    Calcula a pontuação para uma jogada.
+    Recebe: dados da jogada (mesmo formato que o frontend enviava antes)
+    Retorna: estado atualizado do jogo.
+    """
+    try:
+        scorekeeper = RauberskatScorekeeper(db, game_id)
+        dados_jogada = request.get_json()
+        
+        # 1. Calcula a pontuação da jogada
+        scorekeeper.calculate_score(dados_jogada)
+        # 2. Verifica se a rodada deve mudar (ou se deve esperar uma decisão)
+        scorekeeper.check_mode_transition()
+        # 3. Avança o dealer (a menos que uma decisão esteja pendente)
+        if not scorekeeper.awaiting_ramsch_decision:
+            scorekeeper.next_dealer()
+        
+        scorekeeper._save_state() # Salva todas as alterações no banco de dados
+        # Carrega o estado final para retornar ao frontend
+        final_state = scorekeeper.game_ref.get().to_dict()
+        return jsonify(final_state), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404 # Jogo não encontrado
+    except Exception as e:
+        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
+
+@app.route('/api/game/<game_id>/undo', methods=['POST'])
+def undo(game_id):
+    """
+    Desfaz a última jogada.
+    Retorna: estado atualizado do jogo.
+    """
+    try:
+        scorekeeper = RauberskatScorekeeper(db, game_id)
+        if scorekeeper.undo_last_game():
+            restored_state = scorekeeper.game_ref.get().to_dict()
+            return jsonify(restored_state), 200
+        else:
+            return jsonify({"error": "Não há jogadas para desfazer."}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
+
+@app.route('/api/game/<game_id>', methods=['GET'])
+def get_game_state(game_id):
+    """
+    Obtém o estado atual de uma partida.
+    Retorna: estado atual do jogo.
+    """
+    try:
+        game_ref = db.collection('partidas').document(game_id)
+        game_data = game_ref.get().to_dict()
+        if not game_data:
+            return jsonify({"error": "Partida não encontrada."}), 404
+        return jsonify(game_data), 200
+    except Exception as e:
+        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
+
+@app.route('/api/game/<game_id>/decide_ramsch', methods=['POST'])
+def decide_ramsch(game_id):
+    """
+    Processa a decisão de um jogador sobre iniciar uma nova rodada de Ramsch.
+    Recebe: {"jogador": "NomeDoJogador", "deseja_nova_rodada": true/false}
+    Retorna: estado atualizado do jogo.
+    """
+    try:
+        scorekeeper = RauberskatScorekeeper(db, game_id)
+        data = request.get_json()
+        decisao_em_grupo = data.get('decisao_em_grupo', False)
+
+        scorekeeper.processar_decisao_ramsch(jogador, deseja_nova_rodada, decisao_em_grupo)
+        
+        # O método processar_decisao_ramsch já salva o estado, então apenas o retornamos.
+        final_state = scorekeeper.game_ref.get().to_dict()
+        return jsonify(final_state), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    # O host='0.0.0.0' torna o servidor acessível na sua rede local
+    app.run(host='0.0.0.0', port=5000, debug=True)

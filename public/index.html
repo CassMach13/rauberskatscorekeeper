@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Räuberskat Online</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <h1>Räuberskat Scorekeeper (Online)</h1>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="card-group">
+            <h2>Configuração da Partida</h2>
+
+            <div class="form-group">
+                <label for="num-players">Quantos Jogadores?</label>
+                <select id="num-players">
+                    <option value="3" selected>3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+
+            <!-- Player Inputs -->
+            <div class="setup-grid">
+                <div class="form-group"><label>Jogador 1:</label><input type="text" id="player1" value="Jogador A">
+                </div>
+                <div class="form-group"><label>Jogador 2:</label><input type="text" id="player2" value="Jogador B">
+                </div>
+                <div class="form-group"><label>Jogador 3:</label><input type="text" id="player3" value="Jogador C">
+                </div>
+                <div class="form-group" data-player-field="4" style="display:none;"><label>Jogador 4:</label><input
+                        type="text" id="player4" value="Jogador D"></div>
+            </div>
+
+            <!-- Game Details -->
+            <div class="setup-grid">
+                <div class="form-group"><label>Data:</label><input type="text" id="game-date"></div>
+                <div class="form-group"><label>Sede:</label><input type="text" id="game-venue"
+                        placeholder="Local do jogo"></div>
+                <div class="form-group"><label>Mesa:</label>
+                    <select id="game-table">
+                        <option>Mesa 1</option>
+                        <option>Mesa 2</option>
+                        <option>Mesa 3</option>
+                        <option>Mesa 4</option>
+                        <option>Mesa Campeã</option>
+                        <option>Mesa Segundos</option>
+                        <option>Mesa Terceiros</option>
+                        <option>Mesa Perdedora</option>
+                    </select>
+                </div>
+                <!-- Times sub-grid or split -->
+                <div class="setup-subgrid" style="grid-column: span 1;">
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex:1;"><label>Início:</label><input type="text" id="start-time"></div>
+                        <div style="flex:1;"><label>Término:</label><input type="text" id="end-time"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="start-game-btn" class="btn-success">Iniciar Jogo</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display: none;" class="game-layout">
+
+            <!-- Left Column: Controls -->
+            <div class="left-column">
+                <div class="card-group info-panel" style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="info-item">Rodada: <strong id="current-round">-</strong></div>
+                        <div class="info-item">Dealer: <strong id="current-dealer">-</strong></div>
+                    </div>
+                    <!-- Action Buttons moved to top for visibility -->
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <button id="undo-btn" class="btn-warning"
+                            style="flex: 1; font-size: 14px; padding: 8px;">Desfazer Último</button>
+                        <button id="end-game-btn" class="btn-danger"
+                            style="flex: 1; font-size: 14px; padding: 8px;">Finalizar Jogo</button>
+                    </div>
+                </div>
+
+                <div class="card-group">
+                    <h2>Registrar Jogada</h2>
+                    <form id="new-play-form">
+                        <div class="form-group">
+                            <label>Jogador:</label>
+                            <select id="combo-jogador"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jogo:</label>
+                            <select id="combo-jogo"></select>
+                        </div>
+
+                        <!-- Dynamic Fields -->
+                        <div class="form-group" data-field="com_sem">
+                            <label>Com ou Sem:</label>
+                            <select id="combo-com-sem">
+                                <option value="" selected>Selecione...</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" data-field="pontos_ramsch">
+                            <label>Pontos (Ramsch):</label>
+                            <input type="number" id="input-pontos-ramsch">
+                        </div>
+
+                        <!-- Checkboxes styled as rows -->
+                        <div class="checkbox-row" data-field="hand"><input type="checkbox" id="check-hand"><label
+                                for="check-hand">Hand</label></div>
+                        <div class="checkbox-row" data-field="ouvert"><input type="checkbox" id="check-ouvert"><label
+                                for="check-ouvert">Ouvert</label></div>
+                        <div class="checkbox-row" data-field="schneider"><input type="checkbox"
+                                id="check-schneider"><label for="check-schneider">Schneider</label></div>
+                        <div class="checkbox-row" data-field="schneider_anunciado"><input type="checkbox"
+                                id="check-schneider-anunciado"><label for="check-schneider-anunciado">Schneider
+                                Anunciado</label></div>
+                        <div class="checkbox-row" data-field="schwartz"><input type="checkbox"
+                                id="check-schwartz"><label for="check-schwartz">Schwartz</label></div>
+                        <div class="checkbox-row" data-field="schwartz_anunciado"><input type="checkbox"
+                                id="check-schwartz-anunciado"><label for="check-schwartz-anunciado">Schwartz
+                                Anunciado</label></div>
+
+                        <div class="checkbox-row" data-field="kontra"><input type="checkbox" id="check-kontra"><label
+                                for="check-kontra">Kontra</label></div>
+                        <div class="checkbox-row" data-field="reh"><input type="checkbox" id="check-reh"><label
+                                for="check-reh">Reh</label></div>
+                        <div class="checkbox-row" data-field="bock"><input type="checkbox" id="check-bock"><label
+                                for="check-bock">Bock</label></div>
+                        <div class="checkbox-row" data-field="rursch"><input type="checkbox" id="check-rursch"><label
+                                for="check-rursch">Rürsch</label></div>
+
+                        <div class="checkbox-row" data-field="jungfrau"><input type="checkbox"
+                                id="check-jungfrau"><label for="check-jungfrau">Jüngfrau</label></div>
+
+                        <div class="form-group" data-field="skat_empurrado">
+                            <label>Skat Empurrado:</label>
+                            <select id="combo-skat-empurrado">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+
+                        <div class="checkbox-row" data-field="perdeu" style="background-color: rgba(220, 53, 69, 0.2);">
+                            <input type="checkbox" id="check-perdeu"><label for="check-perdeu" style="color:#ff8888">O
+                                Jogador Perdeu (x-2)</label>
+                        </div>
+
+                        <div class="checkbox-row" data-field="houve_empate">
+                            <input type="checkbox" id="check-houve-empate"><label for="check-houve-empate">Houve Empate
+                                (Ramsch)</label>
+                        </div>
+                        <div class="form-group" data-field="jogador_que_empatou">
+                            <label>Jogador que empatou:</label>
+                            <select id="combo-jogador-empate"></select>
+                        </div>
+
+                        <button type="button" id="calculate-btn" class="btn-success">Calcular Pontuação</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Scoreboard & Results -->
+            <div class="right-column">
+                <div class="card-group scoreboard-card"
+                    style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                    <h2>Placar</h2>
+                    <div class="table-responsive" style="flex:1; overflow-y:auto;">
+                        <table id="scoreboard">
+                            <thead>
+                                <tr id="scoreboard-header"></tr>
+                            </thead>
+                            <tbody id="scoreboard-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="last-play-log-container" class="card-group"
+                    style="display:none; flex: 0 0 auto; max-height: 200px; overflow-y: auto;">
+                    <h2>Última Jogada</h2>
+                    <div id="last-play-log"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" style="display: none;" class="card-group">
+            <h2>Fim de Jogo</h2>
+            <div id="final-results"></div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="play-again-btn" class="btn-success">Jogar Novamente</button>
+                <button id="export-btn" class="btn-warning" style="display: none;">Exportar JSON</button>
+                <button id="export-html-btn" class="btn-primary" style="background-color: #17a2b8;">Exportar Resultado
+                    (HTML)</button>
+            </div>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <!-- Logic -->
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
