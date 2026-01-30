@@ -62,14 +62,53 @@ document.addEventListener('DOMContentLoaded', function () {
     comboJogo.addEventListener('change', updateFormVisibility);
 
     // Dynamic Form Updates (Defined here to be safe)
-    const triggers = [
-        'check-houve-empate', 'check-schneider', 'check-schwartz',
-        'check-kontra', 'check-reh', 'check-bock'
-    ];
-    triggers.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => updateFormVisibility());
+    // --- Form Visibility & Auto-Uncheck Logic ---
+    const updateVisibility = () => updateFormVisibility();
+    document.getElementById('combo-jogo').addEventListener('change', updateVisibility);
+
+    // Checkbox dependency chains (Parent -> Children)
+    const dependencies = {
+        'check-schneider': ['check-schneider-anunciado', 'check-schwartz', 'check-schwartz-anunciado'],
+        'check-schwartz': ['check-schwartz-anunciado'],
+        'check-kontra': ['check-reh', 'check-bock', 'check-rursch'],
+        'check-reh': ['check-bock', 'check-rursch'],
+        'check-bock': ['check-rursch']
+    };
+
+    // Attach listeners
+    Object.keys(dependencies).forEach(parentId => {
+        const parent = document.getElementById(parentId);
+        if (parent) {
+            parent.addEventListener('change', () => {
+                // If unchecked, uncheck all dependents
+                if (!parent.checked) {
+                    dependencies[parentId].forEach(childId => {
+                        const child = document.getElementById(childId);
+                        if (child) {
+                            child.checked = false;
+                            // Trigger change on child to propagate unchecks (e.g. unchecking Kontra unchecks Reh, which unchecks Bock...)
+                            // However, since we defined the full chain for Kontra above, recursion isn't strictly needed if list is complete.
+                            // But dispatching change assumes the children also have listeners if we used simple chains. 
+                            // With the explicit lists above, direct uncheck is cleaner.
+                        }
+                    });
+                }
+                updateVisibility();
+            });
+        }
     });
+
+    // Other inputs that affect visibility
+    ['check-schneider', 'check-schwartz', 'check-kontra', 'check-reh', 'check-bock'].forEach(id => {
+        const el = document.getElementById(id);
+        // Avoid double attaching if handled above
+        if (el && !dependencies[id]) el.addEventListener('change', updateVisibility);
+    });
+
+    // Explicit visibility update triggers for non-parents
+    document.getElementById('check-houve-empate').addEventListener('change', updateVisibility);
+    const checkHand = document.getElementById('check-hand');
+    if (checkHand) checkHand.addEventListener('change', updateVisibility);
 
     comboJogador.addEventListener('change', (e) => updateTiePlayerDropdown(e.target.value));
 
@@ -359,17 +398,18 @@ function renderScoreboard(gameState) {
         const rank = ranks[name];
         const totalScore = gameState.scores[name] || 0;
 
-        let scoreColor = '#fff'; // Default zero
-        if (totalScore > 0) scoreColor = '#4ade80'; // Green
-        if (totalScore < 0) scoreColor = '#f87171'; // Red
+        let scoreClass = 'score-zero';
+        if (totalScore > 0) scoreClass = 'score-positive';
+        if (totalScore < 0) scoreClass = 'score-negative';
 
         if (rank === 1) th.classList.add('rank-gold');
-        if (rank === 2) th.classList.add('rank-silver');
-        if (rank === 3) th.classList.add('rank-bronze');
+        else if (rank === 2) th.classList.add('rank-silver');
+        else if (rank === 3) th.classList.add('rank-bronze');
+        else th.classList.add('rank-other');
 
         th.innerHTML = `
             <div class="header-name">${name}</div>
-            <div class="header-score" style="color: ${scoreColor}">${totalScore}</div>
+            <div class="header-score ${scoreClass}">${totalScore}</div>
             <div class="player-rank">${rank}º</div>
         `;
         header.appendChild(th);
@@ -409,7 +449,7 @@ function renderScoreboard(gameState) {
         let spielText = (points > 0 ? '+' : '') + points;
         let suffix = '';
         if (play.round_mode === 'Bock') suffix = ' B';
-        if (play.round_mode === 'Ramsch') {
+        if (play.jogo === 'ramsch') {
             if (play.jogo === 'grand hand') {
                 suffix = ' <span style="position: relative; display: inline-block; padding: 0 2px; background: linear-gradient(to top right, transparent calc(50% - 1px), #f00 calc(50% - 1px), #f00 calc(50% + 1px), transparent calc(50% + 1px));">GH</span>';
             } else {
@@ -422,6 +462,18 @@ function renderScoreboard(gameState) {
 
         body.appendChild(tr);
     });
+
+    // Robust Auto-scroll to bottom
+    const tableContainer = document.querySelector('.scoreboard-card .table-responsive');
+    if (tableContainer) {
+        // Use double requestAnimationFrame to ensure layout is complete
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                tableContainer.scrollTop = tableContainer.scrollHeight;
+                console.log("Auto-scrolled scoreboard to:", tableContainer.scrollHeight);
+            });
+        });
+    }
 }
 
 function renderLastPlayLog(play) {
@@ -457,7 +509,16 @@ function renderLastPlayLog(play) {
     const item = (c, i, t) => c ? line(`${indent}${i} ${t}`) : '';
 
     html += item(play.hand, '✋', 'Hand (+1)');
-    html += item(play.ouvert, '👐', 'Ouvert (+1)');
+
+    // Fix: Ouvert in Grand only logic
+    if (play.ouvert) {
+        if (play.jogo.toLowerCase().includes('grand')) {
+            html += line(`${indent}👐 Ouvert (Base 36, Fator inalterado)`);
+        } else {
+            html += item(true, '👐', 'Ouvert (+1)');
+        }
+    }
+
     html += item(play.schneider, '🎯', 'Schneider (+1)');
     html += item(play.schneider_anunciado, '📢', 'Schneider anunciado (+1)');
     html += item(play.schwartz, '⚫', 'Schwarz (+1)');
@@ -485,7 +546,16 @@ function renderLastPlayLog(play) {
         html += line(`${indent}🔥 Bock ativo (x2)`);
     }
 
-    html += item(play.perdeu, '❌', 'PERDEU (fator x2 e negativo)');
+    // Correct Lost Logic (Hand/Grand Hand = x-1, otherwise x-2)
+    if (play.perdeu) {
+        let isHand = play.hand || (play.jogo && play.jogo.toLowerCase().includes('grand hand'));
+        console.log("Checking Lost Logic:", { game: play.jogo, isHand: isHand, hardHand: play.hand });
+        if (isHand) {
+            html += item(true, '❌', `PERDEU (fator x1) [DBG: Game='${play.jogo}' Hand=${play.hand}]`);
+        } else {
+            html += item(true, '❌', `PERDEU (fator x2) [DBG: Game='${play.jogo}' Hand=${play.hand}]`);
+        }
+    }
 
     html += line(`${indent}📝 Pontos base: ${r.base_score}`);
     html += line(`${indent}🔢 Fator Total: ${r.total_factor}`);
@@ -535,6 +605,27 @@ function updateFormVisibility() {
     }
     else if (game === 'grand hand') {
         show(['com_sem', 'ouvert', 'schneider', 'kontra', 'perdeu']);
+
+        // Secondary options logic (same as normal games)
+        if (document.getElementById('check-schneider').checked) show(['schneider_anunciado', 'schwartz']);
+        if (document.getElementById('check-schwartz').checked) show(['schwartz_anunciado']);
+
+        if (document.getElementById('check-kontra').checked) show(['reh']);
+        if (document.getElementById('check-reh').checked) show(['bock']);
+        if (document.getElementById('check-bock').checked) show(['rursch']);
+    }
+
+    // Dynamic Label Update for "Perdeu"
+    const isHand = document.getElementById('check-hand').checked || game.includes('grand hand');
+    const perdeuLabel = document.querySelector('label[for="check-perdeu"]');
+    if (perdeuLabel) {
+        if (isHand) {
+            perdeuLabel.textContent = "Jogador Perdeu (x-1)";
+            perdeuLabel.style.color = "#d35400"; // Optional visual cue
+        } else {
+            perdeuLabel.textContent = "Jogador Perdeu (x-2)";
+            perdeuLabel.style.color = ""; // Reset
+        }
     }
 }
 
@@ -630,8 +721,11 @@ function generateHTMLReport(gameState) {
         gameState.player_names.forEach(name => {
             const score = cumulative[name];
             const scoreClass = score > 0 ? 'positive-score' : (score < 0 ? 'negative-score' : '');
-            const style = (name === scorer) ? 'background-color: #FFFF99;' : '';
+
+            // Use subtle dark mode highlight instead of bright yellow
+            const style = (name === scorer) ? 'background-color: rgba(255, 255, 255, 0.1);' : '';
             const bold = (name === scorer) ? 'font-weight:bold;' : '';
+
             cells += `<td style="${style} ${bold}" class="${scoreClass}">${score}</td>`;
         });
 
@@ -646,13 +740,31 @@ function generateHTMLReport(gameState) {
         // --- Details History Block ---
         let details = `Resultado da Última Jogada:<br>Jogador: ${play.jogador}<br>Jogo: ${play.jogo.toUpperCase()}<br>`;
         if (play.com_sem) details += `Com/Sem: ${play.com_sem}<br>`;
+
         if (play.hand) details += `Hand (+1)<br>`;
-        if (play.ouvert) details += `Ouvert (+1)<br>`;
+        if (play.ouvert) {
+            if (play.jogo.toLowerCase().includes('grand')) {
+                details += `Ouvert (Base 36)<br>`;
+            } else {
+                details += `Ouvert (+1)<br>`;
+            }
+        }
         if (play.schneider) details += `Schneider (+1)<br>`;
         if (play.schwartz) details += `Schwarz (+1)<br>`;
         if (play.kontra) details += `KONTRA!<br>`;
         if (play.reh) details += `REH!<br>`;
         if (play.bock) details += `BOCK!<br>`;
+
+        // Correct Lost Logic (Hand/Grand Hand = x-1, otherwise x-2)
+        if (play.perdeu) {
+            let isHand = play.hand || (play.jogo && play.jogo.toLowerCase().includes('grand hand'));
+            if (isHand) {
+                details += `PERDEU (fator x1) [DBG: '${play.jogo}' H=${play.hand}]<br>`;
+            } else {
+                details += `PERDEU (fator x2) [DBG: '${play.jogo}' H=${play.hand}]<br>`;
+            }
+        }
+
         details += `Pontuação Base: ${play.result.base_score}<br>`;
         details += `Fator Total: ${play.result.total_factor}<br>`;
         details += `Pontos Finais: ${points}<br>`;
@@ -664,26 +776,62 @@ function generateHTMLReport(gameState) {
             </div>`;
     });
 
-    // 3. Build Placar HTML
+    // 3. Build Placar HTML with Ranking & Calculate Pot
     let placarHtml = '';
-    playerScores.forEach(p => {
-        const isWinner = p.name === winner.name;
-        const colorClass = isWinner ? 'vencedor' : '';
-        placarHtml += `<div class='placar-item ${colorClass}'>${p.name}: ${p.score} pontos</div>`;
+    const winnerScore = winner.score;
+    let paymentHtml = '';
+    let totalPot = 0;
+
+    // Rank Map for Header Logic
+    const rankMap = {};
+    let currentRank = 1;
+    playerScores.forEach((p, i) => {
+        if (i > 0 && p.score < playerScores[i - 1].score) {
+            currentRank++;
+        }
+        rankMap[p.name] = currentRank;
     });
 
-    // 4. Header Columns for Table
+    playerScores.forEach((p, index) => {
+        const isWinner = p.score === winnerScore;
+        const colorClass = isWinner ? 'vencedor' : '';
+        const rank = rankMap[p.name];
+
+        // Ranking Display
+        let medal = '';
+        if (rank === 1) medal = '🥇 ';
+        if (rank === 2) medal = '🥈 ';
+        if (rank === 3) medal = '🥉 ';
+
+        placarHtml += `<div class='placar-item ${colorClass}'>${medal}<strong>${rank}º Lugar:</strong> ${p.name} (${p.score} pontos)</div>`;
+
+        // Payment Calculation (Diff from winner * 0.05)
+        if (!isWinner) {
+            const diff = winnerScore - p.score;
+            const payment = diff * 0.05;
+            totalPot += payment;
+            paymentHtml += `<div class='pagamento-item'>${p.name}: <span class="negative-score">- R$ ${payment.toFixed(2).replace('.', ',')}</span> (Diferença: ${diff} pts)</div>`;
+        } else {
+            paymentHtml += `<div class='pagamento-item vencedor'>${p.name}: <span class="positive-score">Vencedor (Isento)</span></div>`;
+        }
+    });
+
+    // 4. Header Columns for Table (With Rank Colors)
     let tableHeaders = '<th>#</th>';
-    gameState.player_names.forEach(name => tableHeaders += `<th>${name}</th>`);
+    gameState.player_names.forEach(name => {
+        const r = rankMap[name];
+        let rankClass = 'rank-other';
+        if (r === 1) rankClass = 'rank-gold';
+        if (r === 2) rankClass = 'rank-silver';
+        if (r === 3) rankClass = 'rank-bronze';
+
+        tableHeaders += `<th class="${rankClass}">${name}</th>`;
+    });
     tableHeaders += '<th>Spiel</th>';
 
     // 5. Config Details
     const config = gameState.game_config || {};
-    // Ensure we handle missing config values gracefully
     const date = config.date || new Date().toLocaleDateString('pt-BR');
-
-    // We try to grab these from the form inputs if missing in gamestate, or just default
-    // Ideally user inputs were saved to game_config
 
     const detailsHtml = `
         <div><strong>Data:</strong> ${date}</div>
@@ -700,31 +848,54 @@ function generateHTMLReport(gameState) {
             <meta charset="UTF-8">
             <title>Relatório da Partida de Räuberskat</title>
             <style>
-                body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
-                h1, h2 { color: #4a4a4a; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-                .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-                .placar, .pagamentos { margin-bottom: 20px; }
-                .placar-item, .pagamento-item { padding: 8px; border-bottom: 1px solid #eee; }
-                .vencedor { font-weight: bold; color: #28a745; }
-                .jogada { border: 1px solid #ccc; border-radius: 5px; padding: 15px; margin-bottom: 15px; background-color: #fafafa; }
-                .jogada-header { font-weight: bold; font-size: 1.1em; margin-bottom: 10px; }
-                .detalhe { margin-left: 20px; line-height: 1.4; }
-                table.resumo { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                table.resumo th, table.resumo td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-                table.resumo th { background-color: #e9e9e9; font-weight: bold; }
-                .positive-score { color: green; }
-                .negative-score { color: red; }
-                .bold-text { font-weight: bold; }
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
+                h1, h2 { color: #fff; border-bottom: 1px solid #444; padding-bottom: 10px; text-align: center; }
+                .container { background-color: #1e1e1e; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); max-width: 1000px; margin: 0 auto; border: 1px solid #333; }
+                
+                .placar, .pagamentos { margin-bottom: 30px; background: #252525; padding: 15px; border-radius: 5px; border: 1px solid #444;}
+                .placar-item, .pagamento-item { padding: 10px; border-bottom: 1px solid #333; font-size: 1.1em; }
+                .placar-item:last-child, .pagamento-item:last-child { border-bottom: none; }
+                
+                .vencedor { font-weight: bold; color: #2ecc71; }
+                
+                .jogada { border: 1px solid #444; border-radius: 5px; padding: 15px; margin-bottom: 10px; background-color: #252525; }
+                .jogada-header { font-weight: bold; font-size: 1.05em; margin-bottom: 8px; color: #ccc; border-left: 4px solid #3498db; padding-left: 8px; }
+                .detalhe { margin-left: 15px; line-height: 1.4; font-size: 0.95em; color: #aaa; }
+                
+                table.resumo { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95em; table-layout: fixed; }
+                table.resumo th, table.resumo td { border: 1px solid #444; padding: 10px; text-align: center; color: #ddd; }
+                table.resumo th { background-color: #2c2c2c; font-weight: bold; text-transform: uppercase; font-size: 1.1em; }
+                
+                /* Rank Colors in Headers */
+                th.rank-gold { color: #ffd700 !important; text-shadow: 0 0 5px rgba(255, 215, 0, 0.4); }
+                th.rank-silver { color: #e0e0e0 !important; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
+                th.rank-bronze { color: #cd7f32 !important; }
+                th.rank-other { color: #7f8c8d !important; opacity: 0.8; }
+
+                .positive-score { color: #4ade80 !important; font-weight: bold; }
+                .negative-score { color: #f87171 !important; font-weight: bold; }
+                .bold-text { font-weight: bold; color: #fff; }
+                
+                .total-pot { margin-top: 15px; font-size: 1.2em; font-weight: bold; text-align: right; color: #4ade80; border-top: 2px solid #555; padding-top: 10px;}
+                
+                .detalhes-partida { background: #252525; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #444; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;}
             </style>
         </head>
         <body>
             <div class="container">
                 <h1>Relatório da Partida de Räuberskat</h1>
-                <h2>Detalhes da Partida</h2>
-                <div class='detalhes-partida'>${detailsHtml}</div>
+                <div class='detalhes-partida'>
+                    ${detailsHtml}
+                </div>
                 
                 <h2>Placar Final</h2>
                 <div class='placar'>${placarHtml}</div>
+
+                <h2>Pagamentos ao Caixa (Rateio)</h2>
+                <div class='pagamentos'>
+                    ${paymentHtml}
+                    <div class="total-pot">Total Arrecadado: R$ ${totalPot.toFixed(2).replace('.', ',')}</div>
+                </div>
                 
                 <h2>Resumo da Partida</h2>
                 <table class='resumo'>
@@ -732,7 +903,7 @@ function generateHTMLReport(gameState) {
                     <tbody>${summaryRows}</tbody>
                 </table>
 
-                <h2>Histórico de Jogadas</h2>
+                <h2>Histórico Detalhado</h2>
                 ${historyRows}
             </div>
         </body>

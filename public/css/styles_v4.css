@@ -179,9 +179,8 @@ button.btn-danger:hover {
 /* Two Column Layout for Game Screen */
 .game-layout {
     display: grid;
-    grid-template-columns: 350px 1fr; /* Reduced left column width slightly if possible to start giving more to right, checking forms first. Keeping 350-400 is safe. Let's try 360px. */
-    grid-template-columns: 380px 1fr; 
-    gap: 12px; /* Reduced gap */
+    grid-template-columns: 320px 1fr; /* Reduced width to give more space to scoreboard */
+    gap: 12px;
     height: 100%; 
     overflow: hidden; 
     padding-bottom: 10px;
@@ -263,7 +262,8 @@ button.btn-danger:hover {
     border-spacing: 0;
     background-color: #2c2c2c; /* Dark grey base */
     color: #f0f0f0;
-    font-size: 14px;
+    color: #f0f0f0;
+    font-size: 18px; /* Increased for better visibility */
 }
 
 #scoreboard th, #scoreboard td {
@@ -287,12 +287,12 @@ button.btn-danger:hover {
 
 /* Header Content Layout */
 .header-name {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     opacity: 0.9;
     margin-bottom: 2px;
 }
 .header-score {
-    font-size: 1.4rem; /* Prominent size */
+    font-size: 1.6rem; /* Prominent size */
     font-weight: 800;
     color: #fff;
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
@@ -380,6 +380,7 @@ button.btn-danger:hover {
     padding: 15px;
     border-radius: 6px;
     font-family: 'Courier New', monospace;
+    font-size: 16px; /* Increased legibility */
     line-height: 1.5;
     white-space: pre-wrap;
 }

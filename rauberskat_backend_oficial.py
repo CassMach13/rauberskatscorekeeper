@@ -198,7 +198,7 @@ class RauberskatScorekeeper:
             raise ValueError(f"Jogador '{jogador_nome}' não encontrado nos jogadores cadastrados.")
 
         player_index = self.player_names.index(jogador_nome)
-        game_name = dados.get("jogo")
+        game_name = str(dados.get("jogo", "")).strip().lower()
         
         # RAMSCH - Tratamento especial
         if game_name == "ramsch":           
@@ -537,6 +537,8 @@ class RauberskatScorekeeper:
         if is_ouvert and game_name != "grand":
             factor += 1
             print("   👁️  Ouvert (+1)")
+        elif is_ouvert and game_name == "grand":
+            print("   👁️  grand ouvert: Apenas base muda para 36 (sem +1 no fator).")
 
         if schneider:
             factor += 1

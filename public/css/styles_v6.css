@@ -1,0 +1,187 @@
+/* CSS for Räuberskat Scorekeeper Online - Dark Theme (V6 - MONSTRO) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: #f0f0f0;
+    margin: 0;
+    padding: 10px;
+    background-image: url('../Fundo Skat.jpeg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-attachment: fixed;
+    background-size: cover;
+    height: 100vh;
+    overflow: hidden; 
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+body.game-active {
+    height: 100vh; 
+    overflow: hidden; 
+}
+
+.app-container {
+    max-width: 99%; /* Full Width */
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+h1, h2, h3 { text-align: center; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+/* Left Panel Cards (Compact) */
+.card-group {
+    background-color: rgba(20, 20, 20, 0.95);
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 12px; 
+    margin-bottom: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.card-group h2 {
+    font-size: 16px; /* Keep control headers small */
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+    margin-top: 0;
+    text-align: left;
+    color: #aaa;
+    text-transform: uppercase;
+}
+
+/* Forms (Keep compact) */
+.form-group { margin-bottom: 10px; }
+label { display: block; margin-bottom: 3px; font-weight: 600; font-size: 0.9rem; color: #ccc; }
+input, select {
+    width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; font-size: 14px;
+}
+input[type="checkbox"] { width: 18px; height: 18px; }
+.checkbox-row { display: flex; align-items: center; background: rgba(50,50,50,0.5); padding: 6px; border-radius: 4px; margin-bottom: 6px; }
+.checkbox-row label { margin: 0; padding: 0; font-size: 0.95rem; cursor: pointer; }
+
+/* Buttons */
+button { width: 100%; padding: 12px; background: #0d6efd; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+button:hover { background: #0b5ed7; }
+button.btn-success { background-color: #28a745; }
+button.btn-success:hover { background-color: #218838; }
+
+button.btn-warning { background-color: #ffc107; color: #333; }
+button.btn-warning:hover { background-color: #e0a800; }
+
+button.btn-danger { background-color: #dc3545; color: white; }
+button.btn-danger:hover { background-color: #c82333; }
+
+/* LAYOUT - 320px Controls, Rest for Scoreboard */
+.game-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 15px;
+    height: 100%; 
+    overflow: hidden; 
+}
+
+.left-column { overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px; }
+.right-column { display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 10px; }
+
+/* SCOREBOARD - THE MONSTER PART */
+.scoreboard-card {
+    flex: 2; /* Take 2/3 of vertical space on right */
+    display: flex; flex-direction: column; 
+    background-color: rgba(0,0,0,0.95) !important; /* Darker background for contrast */
+    border: 2px solid #555;
+}
+
+.table-responsive { width: 100%; height: 100%; overflow: auto; }
+
+#scoreboard {
+    width: 100%;
+    border-collapse: collapse; 
+    table-layout: fixed; /* Force equal columns */
+}
+
+/* Headers */
+#scoreboard th {
+    background-color: #222;
+    color: #fff;
+    padding: 15px;
+    position: sticky; top: 0; z-index: 10;
+    border-bottom: 4px solid #444;
+    text-transform: uppercase;
+}
+#scoreboard th:first-child, #scoreboard th:last-child { width: 80px; } /* Smaller Index/Spiel columns */
+
+.header-name { font-size: 1.2rem; display: block; opacity: 0.8; margin-bottom: 5px; }
+.header-score {
+    font-size: 3.5rem; /* MONSTER SIZE */
+    font-weight: 900;
+    line-height: 1;
+    display: block;
+}
+.player-rank { font-size: 1rem; color: #ffd700; margin-top: 5px; }
+
+/* Cells */
+#scoreboard td {
+    padding: 8px; /* Tighter vertical padding to fit rows */
+    text-align: center;
+    border: 1px solid #333;
+    font-size: 1.5rem; /* Large history numbers */
+    font-weight: 600;
+}
+#scoreboard td:first-child { color: #888; font-size: 1.2rem; } /* Index */
+
+/* Colors */
+.score-positive { color: #2ecc71; }
+.score-negative { color: #e74c3c; }
+.score-zero { color: #555; }
+.highlight-scorer { background-color: rgba(255, 255, 255, 0.1); }
+
+/* Ranks */
+/* Ranks - Color ONLY Rank/Name, NOT the score value */
+th.rank-gold .player-rank, th.rank-gold .header-name { color: #ffd700; text-shadow: 0 0 5px rgba(255, 215, 0, 0.4); }
+th.rank-silver .player-rank, th.rank-silver .header-name { color: #e0e0e0; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
+th.rank-bronze .player-rank, th.rank-bronze .header-name { color: #cd7f32; }
+th.rank-other .player-rank, th.rank-other .header-name { color: #57606f; opacity: 0.7; } /* Grey for 4th+ */
+
+/* Score Value Colors (Wins over Rank colors for the number itself) */
+.header-score.score-positive { color: #2ecc71 !important; text-shadow: 0 0 5px rgba(46, 204, 113, 0.3); } 
+.header-score.score-negative { color: #e74c3c !important; text-shadow: 0 0 5px rgba(231, 76, 60, 0.3); }
+
+/* Last Play Log - Secondary but clear */
+#last-play-log-container {
+    flex: 1; /* Take 1/3 of vertical space */
+    min-height: 200px;
+}
+#last-play-log {
+    font-family: 'Courier New', monospace;
+    font-size: 18px; /* Very Readable */
+    line-height: 1.4;
+    white-space: pre-wrap;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* Standard Mobile/End Screen/Messages/Modal styles (Miniaturized for V6) */
+@media (max-width: 900px) {
+    .game-layout { grid-template-columns: 1fr; overflow: visible; height: auto; }
+    #scoreboard { table-layout: auto; }
+    .header-score { font-size: 2rem; }
+}
+#message { margin-top: 20px; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
+.error { background-color: #fedce0; color: #842029; }
+.success { background-color: #d1e7dd; color: #0f5132; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: #333; padding: 25px; border-radius: 8px; max-width: 400px; width: 90%; color: white; text-align: center; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+#setup-screen { max-width: 500px; margin: 0 auto; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+.setup-subgrid { display: flex; gap: 10px; }
+#setup-screen .form-group { margin-bottom: 8px; }
+#setup-screen label { margin-bottom: 2px; font-size: 0.9rem; color: #ccc; }
+#setup-screen input, #setup-screen select { padding: 6px 10px; font-size: 0.95rem; }
+#setup-screen h2 { font-size: 1.4rem; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+#setup-screen.card-group { max-width: 900px; margin: 0 auto 20px auto; padding: 20px; }

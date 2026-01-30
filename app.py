@@ -1,4 +1,5 @@
-# c:/Users/cassi/Downloads/Rauberskat_app_Gemini - Online/app.py
+import os
+import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 from flask import Flask, request, jsonify
@@ -6,10 +7,23 @@ from rauberskat_backend_oficial import RauberskatScorekeeper
 from flask_cors import CORS
 
 # --- Inicialização do Firebase ---
-# Certifique-se de que o arquivo 'firebase-credentials.json' está na mesma pasta
-cred = credentials.Certificate("firebase-credentials.json")
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+# Tenta carregar as credenciais da variável de ambiente (Vercel/Produção)
+firebase_creds_json = os.environ.get('FIREBASE_CREDENTIALS')
+
+if firebase_creds_json:
+    # Carrega do JSON na variável de ambiente
+    cred_dict = json.loads(firebase_creds_json)
+    cred = credentials.Certificate(cred_dict)
+elif os.path.exists("firebase-credentials.json"):
+    # Fallback para arquivo local (Desenvolvimento)
+    cred = credentials.Certificate("firebase-credentials.json")
+else:
+    print("CRÍTICO: Nenhuma credencial do Firebase encontrada (Env ou Arquivo)!")
+    cred = None
+
+if cred:
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
 
 # --- Inicialização do Flask ---
 # Configura a pasta 'public' como a pasta de arquivos estáticos (CSS, JS, Imagens)
