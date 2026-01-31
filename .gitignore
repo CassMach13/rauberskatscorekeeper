@@ -27,3 +27,5 @@ Rauberskat_app_local/
 # IDE
 .vscode/
 .idea/
+
+.vercel

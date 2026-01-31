@@ -170,6 +170,17 @@ async function startGame() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(gameDetails)
         });
+
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            console.error("Expected JSON but got:", contentType);
+            // Read text to debug (optional, but helpful)
+            const text = await response.text();
+            console.error("Response body:", text.substring(0, 100)); // Log first 100 chars
+            throw new Error("O servidor não respondeu corretamente (possível erro 404). Verifique se o backend está rodando.");
+        }
+
         const result = await response.json();
 
         if (response.ok) {
@@ -187,7 +198,8 @@ async function startGame() {
         }
     } catch (error) {
         console.error("Network error:", error);
-        showMessage('Erro de conexão com o servidor.', 'error');
+        // Show specific message if it's the custom error we threw
+        showMessage(error.message || 'Erro de conexão com o servidor.', 'error');
     }
 }
 
@@ -243,6 +255,12 @@ async function calculateScore() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Erro de comunicação com o servidor (404/500).");
+        }
+
         const updatedGameState = await response.json();
 
         if (response.ok) {

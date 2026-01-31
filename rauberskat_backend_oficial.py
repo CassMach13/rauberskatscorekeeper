@@ -1,3 +1,8 @@
+import datetime
+import random
+import math
+import copy
+
 class RauberskatScorekeeper:
     # Modificado para integração com Firebase
     def __init__(self, db, game_id):

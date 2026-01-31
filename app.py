@@ -7,38 +7,48 @@ from rauberskat_backend_oficial import RauberskatScorekeeper
 from flask_cors import CORS
 
 # --- Inicialização do Firebase ---
-# Tenta carregar as credenciais da variável de ambiente (Vercel/Produção)
-firebase_creds_json = os.environ.get('FIREBASE_CREDENTIALS')
+db = None  # Inicializa db como None para evitar NameError
+try:
+    # Tenta carregar as credenciais da variável de ambiente (Vercel/Produção)
+    firebase_creds_json = os.environ.get('FIREBASE_CREDENTIALS')
 
-if firebase_creds_json:
-    # Carrega do JSON na variável de ambiente
-    cred_dict = json.loads(firebase_creds_json)
-    cred = credentials.Certificate(cred_dict)
-elif os.path.exists("firebase-credentials.json"):
-    # Fallback para arquivo local (Desenvolvimento)
-    cred = credentials.Certificate("firebase-credentials.json")
-else:
-    print("CRÍTICO: Nenhuma credencial do Firebase encontrada (Env ou Arquivo)!")
-    cred = None
+    if firebase_creds_json:
+        print(f"DEBUG: Encontrei FIREBASE_CREDENTIALS (len={len(firebase_creds_json)})")
+        # Carrega do JSON na variável de ambiente
+        cred_dict = json.loads(firebase_creds_json)
+        cred = credentials.Certificate(cred_dict)
+    elif os.path.exists("firebase-credentials.json"):
+        print("DEBUG: Usando arquivo local firebase-credentials.json")
+        # Fallback para arquivo local (Desenvolvimento)
+        cred = credentials.Certificate("firebase-credentials.json")
+    else:
+        print("CRÍTICO: Nenhuma credencial do Firebase encontrada (Env ou Arquivo)!")
+        cred = None
 
-if cred:
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+    if cred:
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            firebase_admin.initialize_app(cred)
+        
+        db = firestore.client()
+        print("SUCESSO: Firebase conectado!")
+except Exception as e:
+    print(f"ERRO FATAL ao iniciar Firebase: {str(e)}")
+    import traceback
+    traceback.print_exc()
 
 # --- Inicialização do Flask ---
-# Configura a pasta 'public' como a pasta de arquivos estáticos (CSS, JS, Imagens)
-app = Flask(__name__, static_folder='public', static_url_path='')
+# --- Inicialização do Flask ---
+# Na Vercel, o Flask serve apenas a API. Arquivos estáticos são servidos pela CDN.
+app = Flask(__name__)
 
 # --- Configuração do CORS ---
 # Isso permite que requisições de qualquer origem acessem sua API.
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # --- Rotas da API ---
-
-@app.route('/')
-def index():
-    """Serve o arquivo index.html da pasta public"""
-    return app.send_static_file('index.html')
+# A rota '/' (index) foi removida pois o Vercel servirá o index.html da pasta public automaticamente.
 
 @app.route('/api/start_game', methods=['POST'])
 def start_game():
