@@ -4,28 +4,37 @@ __pycache__/
 *$py.class
 *.manifest
 venv/
+.venv/
 env/
 
-# Data & Logs
+# Data & logs
 *.log
 *.sqlite
 resultados_jogos/
+logs_result.json
+Resultado_Skat*.html
 
-# Secrets (CRITICAL)
+# Secrets (CRITICAL — never commit)
 firebase-credentials.json
 .env
+.env.*
+!.env.example
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Large/Legacy Folders
-Apps_versoes_excluidas/
-printscreens/
-Rauberskat_app_local/
+# Local-only / legacy (kept on disk, not published)
+/archive/
+/Apps_versoes_excluidas/
+/printscreens/
+/Rauberskat_app_local/
+/Background/
+
+# Deploy / tooling caches
+.vercel/
+.firebase/
 
 # IDE
 .vscode/
 .idea/
-
-.vercel

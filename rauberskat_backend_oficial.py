@@ -288,14 +288,13 @@ class RauberskatScorekeeper:
                 skat_empurrado = info.get("skat_empurrado", 0)  # default 0 se não existir
 
                 if self.current_mode == "Ramsch":
-                    multiplicador = 2 ** skat_empurrado
+                    multiplicador = 2 ** skat_empurrado  # 0→1, 1→2, 2→4, 3→8
                 else:
-                    multiplicador = skat_empurrado if skat_empurrado > 0 else 1
-
-                pontos = base_score * multiplicador
+                    multiplicador = 1  # Bock: sem skat empurrado no Durchmarsch
 
                 print(f"   📝 Pontos base: {base_score}")
-                print(f"   📤 Skat empurrado: {skat_empurrado} (multiplicador: {multiplicador})")
+                print(f"   📤 Skat empurrado: {skat_empurrado} (multiplicador base: {multiplicador})")
+
 
                 # Aplicar Bock se estiver em Bock
                 if self.current_mode == "Bock":

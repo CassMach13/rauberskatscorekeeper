@@ -558,6 +558,12 @@ function renderLastPlayLog(play) {
             html += line(`${indent}🃏 Skat Empurrado: ${play.info.skat_empurrado}x`);
         }
     }
+    // Durchmarsch em Ramsch: exibir skat empurrado se houver
+    if (play.jogo === 'durchmarsch' && play.round_mode === 'Ramsch') {
+        if (play.info && play.info.skat_empurrado > 0) {
+            html += line(`${indent}🃏 Skat Empurrado: ${play.info.skat_empurrado}x`);
+        }
+    }
 
     // Bock Active Logic
     if (play.round_mode === 'Bock' && play.jogo !== 'ramsch' && play.jogo !== 'null') {
@@ -619,6 +625,14 @@ function updateFormVisibility() {
         show(['pontos_ramsch', 'jungfrau', 'houve_empate', 'skat_empurrado']);
         if (document.getElementById('check-houve-empate').checked) {
             show(['jogador_que_empatou']);
+        }
+    }
+    else if (game === 'durchmarsch') {
+        // Em rodada Ramsch, o skat pode ter sido empurrado → mostrar campo
+        // Em rodada Bock, não há skat empurrado no Durchmarsch
+        const currentRound = document.getElementById('current-round')?.textContent || '';
+        if (currentRound === 'Ramsch') {
+            show(['skat_empurrado']);
         }
     }
     else if (game === 'grand hand') {
