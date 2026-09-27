@@ -40,7 +40,6 @@ api/index.py            # Entrypoint Vercel → importa app Flask
 app.py                  # Rotas Flask + bootstrap Firebase
 rauberskat_backend_oficial.py
 docs/                   # Contexto de regras / backlog
-vercel.json
 Dockerfile
 requirements.txt
 firebase-credentials.example.json
