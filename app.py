@@ -178,6 +178,8 @@ def decide_ramsch(game_id):
     try:
         scorekeeper = RauberskatScorekeeper(db, game_id)
         data = request.get_json()
+        jogador = data.get('jogador')
+        deseja_nova_rodada = data.get('deseja_nova_rodada', False)
         decisao_em_grupo = data.get('decisao_em_grupo', False)
 
         scorekeeper.processar_decisao_ramsch(jogador, deseja_nova_rodada, decisao_em_grupo)

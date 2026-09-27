@@ -44,6 +44,25 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     exportBtn.addEventListener('click', exportResults);
 
+    // Retomar jogos anteriores
+    document.getElementById('resume-game-btn').addEventListener('click', () => openGame(currentGameId));
+    document.getElementById('game-recent-games').addEventListener('click', showRecentGamesModal);
+    document.getElementById('setup-recent-games').addEventListener('click', showRecentGamesModal);
+    document.getElementById('recent-games-close').addEventListener('click', closeRecentGamesModal);
+    document.getElementById('recent-games-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'recent-games-modal') closeRecentGamesModal(); // clique fora fecha
+    });
+    if (loadRecentGames().length > 0) {
+        document.getElementById('setup-recent-games').style.display = 'block';
+    }
+
+    // Botão "voltar" do navegador/celular troca entre jogos pela URL
+    window.addEventListener('popstate', () => {
+        const id = new URLSearchParams(window.location.search).get('game_id');
+        if (!id) window.location.reload();
+        else if (id !== currentGameId) openGame(id, { push: false });
+    });
+
     const exportHtmlBtn = document.getElementById('export-html-btn');
     if (exportHtmlBtn) {
         exportHtmlBtn.addEventListener('click', () => {
@@ -305,9 +324,12 @@ async function endGame() {
 
         if (!response.ok) throw new Error(finalState.error);
 
+        rememberGame(finalState, { ended: true });
+
         document.body.classList.remove('game-active'); // Disable fixed layout
         gameScreen.style.display = 'none';
         endScreen.style.display = 'block';
+        window.scrollTo(0, 0);
 
         const scores = finalState.scores;
         const names = Object.keys(scores);
@@ -351,6 +373,135 @@ function exportResults() {
 }
 
 
+// --- Jogos Recentes (retomar partida anterior) ---
+// A partida continua salva no Firestore; guardamos neste aparelho só a lista de IDs
+// dos últimos jogos para permitir voltar a eles mesmo depois de iniciar outro.
+
+const RECENT_GAMES_KEY = 'rauberskat_recent_games';
+const MAX_RECENT_GAMES = 15;
+
+function loadRecentGames() {
+    try {
+        const list = JSON.parse(localStorage.getItem(RECENT_GAMES_KEY));
+        return Array.isArray(list) ? list : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveRecentGames(list) {
+    try {
+        localStorage.setItem(RECENT_GAMES_KEY, JSON.stringify(list.slice(0, MAX_RECENT_GAMES)));
+    } catch (e) {
+        console.warn('Não foi possível salvar jogos recentes:', e);
+    }
+}
+
+function rememberGame(gameState, extra = {}) {
+    if (!currentGameId || !gameState) return;
+    const config = gameState.game_config || {};
+    const list = loadRecentGames().filter(g => g.id !== currentGameId);
+    list.unshift({
+        id: currentGameId,
+        players: gameState.player_names || [],
+        scores: gameState.scores || {},
+        plays: (gameState.game_history || []).length,
+        date: gameState.date || config.date || '',
+        venue: gameState.venue || config.venue || '',
+        table: gameState.table || config.table || '',
+        updated_at: Date.now(),
+        ...extra
+    });
+    saveRecentGames(list);
+}
+
+function forgetGame(gameId) {
+    saveRecentGames(loadRecentGames().filter(g => g.id !== gameId));
+}
+
+async function openGame(gameId, { push = true } = {}) {
+    if (!gameId) return;
+    try {
+        const res = await fetch(`${API_URL}/api/game/${gameId}`);
+        const data = await res.json();
+        if (!res.ok) {
+            if (res.status === 404) forgetGame(gameId);
+            throw new Error(data.error || 'Partida não encontrada.');
+        }
+
+        currentGameId = gameId;
+        if (push) {
+            const newUrl = `${window.location.pathname}?game_id=${gameId}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+        }
+        closeRecentGamesModal();
+        renderGameState(data);
+        window.scrollTo(0, 0);
+    } catch (e) {
+        closeRecentGamesModal();
+        showMessage(e.message || 'Erro ao carregar a partida.', 'error');
+    }
+}
+
+function showRecentGamesModal() {
+    const container = document.getElementById('recent-games-list');
+    container.innerHTML = '';
+    const games = loadRecentGames();
+    const gameOpen = gameScreen.style.display !== 'none';
+
+    if (games.length === 0) {
+        container.innerHTML = '<p style="color:#aaa;">Nenhum jogo salvo neste aparelho.</p>';
+    }
+
+    games.forEach(g => {
+        const isCurrent = gameOpen && g.id === currentGameId;
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'recent-game-item' + (isCurrent ? ' current' : '');
+
+        const title = document.createElement('div');
+        title.className = 'recent-game-title';
+        title.textContent = g.players.join(' · ');
+        const tag = document.createElement('span');
+        tag.className = 'recent-game-tag ' + (isCurrent ? 'active' : (g.ended ? 'ended' : 'active'));
+        tag.textContent = isCurrent ? 'ABERTO' : (g.ended ? 'FINALIZADO' : 'EM ANDAMENTO');
+        title.appendChild(tag);
+
+        const updated = new Date(g.updated_at).toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+        const meta = document.createElement('div');
+        meta.className = 'recent-game-meta';
+        meta.textContent = [g.date, g.venue, g.table, `${g.plays} jogadas`, `atualizado ${updated}`]
+            .filter(Boolean).join(' · ');
+
+        const scores = document.createElement('div');
+        scores.className = 'recent-game-scores';
+        scores.textContent = [...g.players]
+            .sort((a, b) => (g.scores[b] || 0) - (g.scores[a] || 0))
+            .map(name => `${name}: ${g.scores[name] || 0}`)
+            .join('  |  ');
+
+        item.append(title, meta, scores);
+        if (isCurrent) {
+            item.disabled = true;
+        } else {
+            item.addEventListener('click', () => {
+                const label = g.players.join(', ');
+                if (confirm(`Retomar o jogo de ${label}?`)) openGame(g.id);
+            });
+        }
+        container.appendChild(item);
+    });
+
+    document.getElementById('recent-games-modal').style.display = 'flex';
+}
+
+function closeRecentGamesModal() {
+    document.getElementById('recent-games-modal').style.display = 'none';
+}
+
+
 // --- Rendering & Logic ---
 
 async function fetchAndRenderGameState(gameId) {
@@ -367,8 +518,10 @@ async function fetchAndRenderGameState(gameId) {
 function renderGameState(gameState) {
     currentGameState = gameState; // Update global state reference
     console.log("Rendering state:", gameState);
+    rememberGame(gameState, { ended: false });
     document.body.classList.add('game-active'); // Enable fixed layout
     setupScreen.style.display = 'none';
+    endScreen.style.display = 'none';
     messageDiv.style.display = 'none';
     gameScreen.style.display = 'grid';
 
@@ -382,6 +535,9 @@ function renderGameState(gameState) {
     if (lastPlay) {
         document.getElementById('last-play-log-container').style.display = 'block';
         renderLastPlayLog(lastPlay);
+    } else {
+        // Evita mostrar o log de outro jogo ao alternar entre partidas
+        document.getElementById('last-play-log-container').style.display = 'none';
     }
 
     handleRamschDecision(gameState);
